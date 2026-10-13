@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Countdown for My Favorite Person</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;1,400;1,500&family=DM+Mono:wght@300;400&family=Jost:wght@400;500&display=swap">
+<style>
+/* Layout: eine einzige Nachthimmel-Welt (bewusst nur dunkel). Mittig gesetzt wie eine Sternkarte:
+   vorher nur der Countdown, danach Gruß, ein antippbares Sternbild und Wünsche. */
+:root {
+  color-scheme: dark;
+  --sky: #070B1F;
+  --sky-2: #151A45;
+  --ink: #ECEAF8;
+  --muted: #9A9CC6;
+  --gold: #F3CB6B;
+  --star: #FFF6DC;
+  --line: rgba(236, 234, 248, .16);
+  --display: "Cormorant", "Iowan Old Style", Georgia, serif;
+  --body: "Jost", "Segoe UI", system-ui, sans-serif;
+  --mono: "DM Mono", ui-monospace, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--sky); }
+body {
+  background: linear-gradient(180deg, var(--sky) 0%, var(--sky-2) 100%) fixed;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  min-height: 100vh;
+}
+#sky { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.page {
+  position: relative;
+  z-index: 1;
+  max-width: 44rem;
+  margin-inline: auto;
+  padding-inline: clamp(1rem, 5vw, 2.5rem);
+  padding-block: clamp(3rem, 10vw, 6rem);
+  text-align: center;
+}
+.stack { display: flex; flex-direction: column; align-items: center; gap: clamp(4rem, 11vw, 7rem); }
+section { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; width: 100%; }
+h1, h2, p { margin: 0; }
+h1, h2 { font-family: var(--display); font-weight: 400; text-wrap: balance; line-height: 1.05; }
+h1 { font-size: clamp(2.75rem, 11vw, 5.5rem); }
+h2 { font-size: clamp(2rem, 6vw, 3rem); }
+em { font-style: italic; color: var(--gold); }
+.label {
+  font-family: var(--mono);
+  font-size: .75rem;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.lead { max-width: 30rem; color: var(--ink); }
+.quiet { color: var(--muted); max-width: 28rem; }
+
+/* Countdown */
+.clock {
+  font-family: var(--mono);
+  font-weight: 300;
+  font-size: clamp(3rem, 15vw, 7.5rem);
+  line-height: 1;
+  color: var(--star);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 2rem rgba(243, 203, 107, .35);
+}
+.days { font-family: var(--display); font-style: italic; font-size: clamp(1.5rem, 5vw, 2.25rem); color: var(--gold); }
+.units {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  width: min(100%, 26rem);
+}
+.rule { width: 4rem; height: 1px; background: var(--line); }
+
+/* Sternbild */
+.chart {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: clamp(.5rem, 2vw, 1rem);
+}
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.lines {
+  stroke: var(--gold);
+  stroke-width: 1;
+  stroke-opacity: .7;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 3s ease;
+}
+.lines.done { stroke-dashoffset: 0; }
+.star { cursor: pointer; outline: none; }
+.star .core { fill: var(--muted); animation: pulse 2.4s ease-in-out infinite; }
+.star .halo { fill: var(--gold); opacity: 0; transition: opacity .6s ease; }
+.star text { font-family: var(--mono); font-size: 11px; fill: var(--muted); opacity: 0; transition: opacity .6s ease; }
+.star[aria-pressed="true"] .core { fill: var(--star); animation: none; }
+.star[aria-pressed="true"] .halo { opacity: .28; }
+.star[aria-pressed="true"] text { opacity: 1; }
+.star:focus-visible .hit { stroke: var(--gold); stroke-width: 1.5; }
+@keyframes pulse { 50% { opacity: .35; } }
+
+.caption { min-height: 9rem; display: flex; flex-direction: column; align-items: center; gap: .5rem; }
+.caption .name { font-family: var(--display); font-style: italic; font-size: clamp(1.75rem, 5vw, 2.25rem); color: var(--gold); line-height: 1.1; }
+.finale { gap: 1rem; }
+.finale p { font-family: var(--display); font-size: clamp(1.375rem, 4vw, 1.75rem); line-height: 1.35; max-width: 32rem; }
+
+/* Wünsche */
+.wishes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; width: 100%; }
+.wishes li {
+  font-family: var(--display);
+  font-size: clamp(1.375rem, 4vw, 1.75rem);
+  line-height: 1.3;
+  padding-block: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+.wishes li:last-child { border-bottom: 1px solid var(--line); }
+
+footer { color: var(--muted); font-size: .9375rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .star .core { animation: none; }
+  .lines, .star .halo, .star text { transition: none; }
+}
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+
+<div class="page">
+  <div class="stack">
+
+    <!-- Vor dem Geburtstag -->
+    <section id="locked">
+      <h2>A new star rises tonight, <em data-name>my love</em>.</h2>
+      <p class="days" id="days" hidden></p>
+      <div class="clock" id="clock" role="timer" aria-live="off">00:00:00</div>
+      <div class="units label"><span>Hours</span><span>Minutes</span><span>Seconds</span></div>
+      <span class="rule"></span>
+      <p class="quiet">The sky is still quiet. When the time runs out, it will show you something made only for you.</p>
+    </section>
+
+    <!-- Am Geburtstag: wird erst dann befüllt -->
+    <div class="stack" id="open" hidden></div>
+
+    <footer>Hung in the sky for you<span id="from"></span>.</footer>
+  </div>
+</div>
+
+<script>
+/* ========= HIER ANPASSEN ========= */
+const CONFIG = {
+  name: "my love",                // Ihr Name oder Kosename
+  from: "",                        // Dein Name (optional), z. B. "Nils"
+  month: 10,                       // Geburtsmonat (1–12)
+  day: 14,                         // Geburtstag (1–31)
+  birthYear: null,                 // Geburtsjahr (optional) – dann wird das Alter genannt
+  daysOpen: 30,                    // So viele Tage bleibt der Inhalt ab dem Geburtstag sichtbar
+  sign: "Libra",                   // Sternzeichen (die Sterne sind als Waage angeordnet)
+  greeting: "Tonight the whole sky is shining just for you.",
+  stars: [                         // Genau 6 Sterne: was sie ausmacht. Beispieltexte – bitte ersetzen
+    ["Your laugh", "It is contagious, and it makes me happy."],
+    ["Your creativity", "It is impressive what you make out of an idea and an empty page."],
+    ["Your curiosity", "You always want to know more. It is never boring with you."],
+    ["Your quirkiness", "You are wonderfully, perfectly weird. Please never change."],
+    ["Your heart", "You feel everything so deeply. I love that about you."],
+    ["Your strength", "No matter how hard it gets, you keep going. You amaze me."]
+  ],
+  finale: "Together they make a constellation that exists only once. I am so glad you exist.",
+  wishes: [                        // Wünsche für ihr neues Lebensjahr. Beispieltexte – bitte ersetzen
+    "That your body is gentle with you and gives you many good days.",
+    "That you are as proud of yourself as you deserve to be.",
+    "That your dreams move a little closer.",
+    "And many nights with clear skies."
+  ]
+};
+/* ================================= */
+
+const DAY = 864e5;
+const NS = "http://www.w3.org/2000/svg";
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+// Vorschau für dich: Link mit #vorschau am Ende zeigt den Inhalt schon vorher.
+const preview = location.hash === "#vorschau";
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+function svg(tag, attrs) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+
+// Nächster Geburtstag (00:00 Uhr) und der letzte davor.
+function birthdays(now) {
+  const at = y => new Date(y, CONFIG.month - 1, CONFIG.day);
+  let next = at(now.getFullYear());
+  if (now >= next) next = at(now.getFullYear() + 1);
+  return { next, last: at(next.getFullYear() - 1) };
+}
+
+/* Sternbild Waage, aus den echten Himmelskoordinaten abgeleitet (Osten links), viewBox 400 × 420.
+   Reihenfolge: Beta, Alpha, Gamma, Sigma, Upsilon, Tau Librae. Linien: Dreieck Beta-Alpha-Sigma, Arm zu Gamma, Schweif Sigma-Upsilon-Tau. */
+const POS = [[224, 40], [333, 159], [145, 137], [277, 326], [138, 377], [133, 407]];
+const PATH = "M145 137 L224 40 L333 159 L277 326 L224 40 M277 326 L138 377 L133 407";
+
+function buildConstellation() {
+  const sec = el("section");
+  const h = el("h2");
+  h.innerHTML = "What makes you <em>you</em>";
+  sec.append(h, el("p", "quiet", "Tap the stars one by one to light them up."));
+
+  const chart = el("div", "chart");
+  const root = svg("svg", { viewBox: "0 0 400 440", role: "group", "aria-label": CONFIG.sign + " constellation" });
+  const lines = svg("path", { d: PATH, fill: "none", pathLength: "1", class: "lines" });
+  root.append(lines);
+
+  const caption = el("div", "caption");
+  const count = el("p", "label", "0 of " + POS.length + " stars are shining");
+  const name = el("p", "name", "");
+  const text = el("p", "lead", "");
+  caption.append(count, name, text);
+
+  const finale = el("section", "finale");
+  finale.hidden = true;
+  finale.append(el("span", "rule"), el("p", null, CONFIG.finale));
+
+  let lit = 0;
+  POS.forEach(([x, y], i) => {
+    const [title, body] = CONFIG.stars[i] || ["", ""];
+    const g = svg("g", {
+      class: "star", transform: "translate(" + x + " " + y + ")",
+      tabindex: "0", role: "button", "aria-pressed": "false", "aria-label": "Star " + (i + 1)
+    });
+    const left = x > 300;
+    const label = svg("text", { x: left ? -12 : 12, y: i === 5 ? 18 : -10, "text-anchor": left ? "end" : "start" });
+    label.textContent = title;
+    g.append(
+      svg("circle", { class: "hit", r: i > 3 ? 14 : 22, fill: "transparent" }),
+      svg("circle", { class: "halo", r: 13 }),
+      svg("circle", { class: "core", r: 4 }),
+      label
+    );
+    const light = () => {
+      if (g.getAttribute("aria-pressed") !== "true") {
+        g.setAttribute("aria-pressed", "true");
+        g.setAttribute("aria-label", title);
+        lit++;
+        shoot(1);
+      }
+      count.textContent = lit + " of " + POS.length + " stars are shining";
+      name.textContent = title;
+      text.textContent = body;
+      if (lit === POS.length) {
+        lines.classList.add("done");
+        finale.hidden = false;
+      }
+    };
+    g.addEventListener("click", light);
+    g.addEventListener("keydown", e => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); light(); }
+    });
+    root.append(g);
+  });
+
+  chart.append(root);
+  sec.append(chart, caption, finale);
+  return sec;
+}
+
+// Baut den eigentlichen Inhalt erst auf, wenn er gezeigt werden darf.
+function buildOpen(last, now) {
+  const hero = el("section");
+  hero.append(el("p", "label", now - last < DAY ? "Today is your day" : "Your birthday sky"));
+  const h1 = el("h1");
+  h1.innerHTML = "Happy Birthday, <em></em>";
+  h1.querySelector("em").textContent = CONFIG.name;
+  const age = CONFIG.birthYear ? last.getFullYear() - CONFIG.birthYear : null;
+  hero.append(h1, el("p", "lead", CONFIG.greeting + (age ? " " + age + " years, and you shine brighter than ever." : "")));
+
+  const wishSec = el("section");
+  const h2 = el("h2");
+  h2.innerHTML = "What I <em>wish</em> for you";
+  const ul = el("ul", "wishes");
+  CONFIG.wishes.forEach(t => ul.append(el("li", null, t)));
+  wishSec.append(el("p", "label", "For your year ahead"), h2, ul);
+
+  $("open").append(hero, buildConstellation(), wishSec);
+}
+
+let opened = false;
+function tick() {
+  const now = new Date();
+  const { next, last } = birthdays(now);
+  const isOpen = preview || now - last < CONFIG.daysOpen * DAY;
+
+  $("locked").hidden = isOpen;
+  $("open").hidden = !isOpen;
+
+  if (isOpen) {
+    if (!opened) {
+      opened = true;
+      buildOpen(last, now);
+      shoot(6);
+    }
+    return;
+  }
+
+  const diff = next - now;
+  const d = Math.floor(diff / DAY);
+  $("days").hidden = d === 0;
+  $("days").textContent = d === 1 ? "1 day and" : d + " days and";
+  $("clock").textContent =
+    pad(Math.floor(diff / 36e5) % 24) + ":" + pad(Math.floor(diff / 6e4) % 60) + ":" + pad(Math.floor(diff / 1e3) % 60);
+}
+
+/* Himmel: funkelnde Sterne und Sternschnuppen */
+const canvas = $("sky");
+const ctx = canvas.getContext("2d");
+let field = [], streaks = [];
+
+function resize() {
+  const r = devicePixelRatio || 1;
+  canvas.width = innerWidth * r;
+  canvas.height = innerHeight * r;
+  ctx.setTransform(r, 0, 0, r, 0, 0);
+  const n = Math.round(innerWidth * innerHeight / 5500);
+  field = Array.from({ length: n }, () => ({
+    x: Math.random() * innerWidth,
+    y: Math.random() * innerHeight,
+    r: Math.random() * 1.2 + .3,
+    phase: Math.random() * Math.PI * 2,
+    speed: .4 + Math.random() * 1.2
+  }));
+  if (reduced) drawSky(0);
+}
+function shoot(count) {
+  if (reduced) return;
+  for (let i = 0; i < count; i++) {
+    streaks.push({
+      x: Math.random() * innerWidth * .9,
+      y: Math.random() * innerHeight * .4,
+      life: -i * 18,           // gestaffelter Start
+      len: 90 + Math.random() * 90
+    });
+  }
+}
+function drawSky(t) {
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  for (const s of field) {
+    ctx.globalAlpha = reduced ? .8 : .45 + .45 * Math.sin(s.phase + t / 1000 * s.speed);
+    ctx.fillStyle = "#FFF6DC";
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  streaks = streaks.filter(s => s.life < 60);
+  for (const s of streaks) {
+    s.life++;
+    if (s.life < 0) continue;
+    const p = s.life / 60;
+    const hx = s.x + p * 320, hy = s.y + p * 150;
+    const tx = hx - s.len * .9, ty = hy - s.len * .42;
+    const g = ctx.createLinearGradient(tx, ty, hx, hy);
+    g.addColorStop(0, "rgba(243, 203, 107, 0)");
+    g.addColorStop(1, "rgba(255, 246, 220, " + (1 - p) + ")");
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = g;
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(hx, hy);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+function loop(t) {
+  drawSky(t);
+  requestAnimationFrame(loop);
+}
+
+document.documentElement.lang = "en";
+addEventListener("resize", resize);
+document.querySelectorAll("[data-name]").forEach(n => n.textContent = CONFIG.name);
+if (CONFIG.from) $("from").textContent = " by " + CONFIG.from;
+resize();
+tick();
+setInterval(tick, 1000);
+if (!reduced) requestAnimationFrame(loop);
+</script>
+</body>
+</html>
